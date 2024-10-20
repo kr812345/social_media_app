@@ -1,0 +1,2 @@
+app -> users -> post_app or dp_app -> post_app -> post ur post -> update ur post -> delete ur post -> 
+                                   -> dm_app -> 
