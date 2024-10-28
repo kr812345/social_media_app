@@ -5,13 +5,13 @@ from shared.models.chat_model import Chat
 
 class ChatController:
     @staticmethod
-    def get_all_chats():
-        chats = ChatService.get_all_chats()
+    def get_all_chats(username):
+        chats = ChatService.get_all_chats(username)
         return Chatview.render_chats(chats), 200
 
     @staticmethod
-    def get_chat(receiver_name):
-        chat = ChatService.open_chat(receiver_name)
+    def get_chat(chat_id):
+        chat = ChatService.open_chat(chat_id)
         if not Chat.follower:
             return Chatview.render_error("They don't follow you."), 404
         return Chatview.render_chat(chat), 200
@@ -19,13 +19,15 @@ class ChatController:
     @staticmethod
     def create_chat():
         data = request.get_json()
+        chat_id = data.get('chat_id')
         sender_name = data.get('sender_name')
         receiver_name = data.get('receiver_name')
         content_type = data.get('content_type')
         content = data.get('content')
+        receiver_at = data.get('receiver_at')
 
         chat = ChatService.create_chat(sender_name,receiver_name, content_type, content)
-        return Chatview.render_success('Chat Created, Say hii..',Chat.chat_id), 201
+        return Chatview.render_success('Chat Created, Say hii..',chat_id), 201
 
     @staticmethod
     def delete_chat(chat_id):

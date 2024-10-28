@@ -21,15 +21,14 @@ class ChatService:
         return new_chat
 
     @staticmethod
-    def get_all_chats():
-        sender_name = User.username  
-        if Chat.follower:
-            return Chat.query.filter_by(sender_name).all()
+    def get_all_chats(username):
+        print(username)
+        return Chat.query.filter(username = username).all()
 
     @staticmethod
     def open_chat(chat_id):
         if chat_id:
-            return Chat.query.filter_by(chat_id == chat_id).first()
+            return Chat.query.filter_by(chat_id = chat_id).first()
 
 
     @staticmethod
@@ -69,21 +68,21 @@ class ChatService:
     @staticmethod
     def get_videos(chat_id,content_type="mp4"):
         if Chat.query.filter_by(Chat.chat_id == chat_id).first():
-            return Content.query.filter_by(content_type == content_type)
+            return Content.query.filter_by(content_type = content_type)
 
     @staticmethod
     def get_audios(chat_id,content_type='mp3'):
         if Chat.query.filter_by(Chat.chat_id == chat_id).first():
-            return Content.query.filter_by(content_type == Content_type)
+            return Content.query.filter_by(content_type = Content_type)
 
     @staticmethod
     def get_photos(chat_id,content_type='jpg' or 'png'):
         if Chat.query.filter_by(Chat.chat_id == chat_id).first():
-            return Content.query.filter_by(content_type == Content_type)
+            return Content.query.filter_by(content_type = Content_type)
 
 
     @staticmethod
     def upload_media():
-        return
+        return 
     
     
