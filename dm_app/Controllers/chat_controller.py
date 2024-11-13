@@ -1,7 +1,9 @@
-from flask import request
+from flask import request,jsonify
 from dm_app.Services.chat_service import ChatService
-from dm_app.Views.chat_view import Chatview
-from shared.models.chat_model import Chat
+from dm_app.Views.chat_view import Chatview                                               
+from shared.models.chat_model import Chat,Content
+from user_app.controllers.user_controller import UserController
+from dm_app.Services.Cloud_services import CloudService
 
 class ChatController:
     @staticmethod
@@ -10,11 +12,11 @@ class ChatController:
         return Chatview.render_chats(chats), 200
 
     @staticmethod
-    def get_chat(chat_id):
+    def open_chat(chat_id):
         chat = ChatService.open_chat(chat_id)
-        if not Chat.follower:
-            return Chatview.render_error("They don't follow you."), 404
-        return Chatview.render_chat(chat), 200
+        if not chat:
+            return Chatview.render_error("chat_id not found."), 404
+        return Chatview.render_chats(chat), 200
 
     @staticmethod
     def create_chat():
@@ -22,74 +24,96 @@ class ChatController:
         chat_id = data.get('chat_id')
         sender_name = data.get('sender_name')
         receiver_name = data.get('receiver_name')
-        content_type = data.get('content_type')
+        follower = data.get('follower')
         content = data.get('content')
-        receiver_at = data.get('receiver_at')
 
-        chat = ChatService.create_chat(sender_name,receiver_name, content_type, content)
-        return Chatview.render_success('Chat Created, Say hii..',chat_id), 201
+        chat = ChatService.create_chat(chat_id,sender_name,receiver_name, follower, content)
+        if chat:
+            return Chatview.render_success('Chat Created, Say hii..',chat.chat_id), 201
+        return Chatview.render_error("User not found."), 404
 
     @staticmethod
     def delete_chat(chat_id):
-        chat_id = request.get('chat_id')
         ChatService.delete_chat(chat_id)
-        return 
+
+        if not chat_id:
+            return Chatview.render_error('chat_id does not exist.'), 404
+        return Chatview.render_success("chat deleted", chat_id), 201
 
     @staticmethod
     def send_message():
         data = request.get_json()
+        chat_id = data.get('chat_id')
         sender_name = data.get('sender_name')
         receiver_name = data.get('receiver_name')
-        content_type = data.get('content_type')
         encrypted_content = ChatService.chat_encryption(data.get('content'))
 
-        if encrypted_content:
-            return Chatview.render_success('pta ni kya kru iske baad!'), 200
-        return Userview.render_error('Kux error aaya h..'), 401
+        if Chat.query.filter_by(sender_name=sender_name) and Chat.query.filter_by(receiver_name=receiver_name):
+            if encrypted_content:
+                chat = ChatService.create_chat(chat_id = chat_id, sender_name = sender_name, receiver_name = receiver_name, follower = 1, content = encrypted_content)
+                return Chatview.render_chat(chat), 200
+        return Chatview.render_error('One of the chatting partner is missing.'), 401
 
     @staticmethod
-    def receive_message():
-        data = request.get_json()
-        sender_name = data.get('sender_name')
-        receiver_name = data.get('receiver_name')
-        content_type = data.get('content_type')
-        decrypted_content = data.get('encrypted_content')
+    def receive_message(chat_id):
+        if (Chat.query.filter_by(chat_id=chat_id).order_by(Chat.sent_at.desc()).first().sent_at < Content.query.filter_by(chat_id=chat_id).order_by(Content.uploaded_at.desc()).first().uploaded_at):
+            latest_msg = Chat.query.filter_by(chat_id=chat_id).order_by(Chat.sent_at.desc()).first()
 
-        if decrypted_content:
-            return Chatview.render_success('naa-samajhne se samajhne me privartan ho gya h..'), 200
-        return Chatview.render_error('samajhna suljhane me koi dikkat h..'), 401
+            decrypted_content = ChatService.chat_decryption(latest_msg.content)
 
-    # @staticmethod
-    # def get_profile():
-    #     data = request.get_json()
-    #     receiver_name = data.get('receiver_name')
-    #     profile = ChatService.get(receiver_name)
+            if decrypted_content:
+                return Chatview.render_chat(latest_msg), 200
+            
+            return Chatview.render_error('decryption me koi dikkat h..'), 401
+        
+        else:
+            latest_msg = Content.query.filter_by(chat_id=chat_id).order_by(Content.uploaded_at.desc()).first()
 
-    #     if profile:
-    #         return Chatview.render_success('profile mil gyi..'), 200
-    #     return Chatview.render_error('profile milne me koi dkkt h..'), 404
+            decrypted_content = ChatService.chat_decryption(latest_msg.content_url)
+
+            if decrypted_content:
+                return Chatview.render_media(latest_msg), 200
+            
+            return Chatview.render_error('decryption me koi dikkat h..'), 401
 
     @staticmethod
-    def get_media():
-        data = request.get_json()
-        chat_id = data.get('chat_id')
-        content_type = data.get('content_type')
-        content = data.get("content")
-        if content_type == mp4:
+    def get_profile(chat_id):
+        profile = ChatService.get_profile(chat_id)
+
+        if not profile:
+            return Chatview.render_error('profile nhi h..'), 404
+        
+        return {"Username":profile['username'],"full_name":profile["full_name"],"followers":2,"bio":profile["bio"]}, 200
+
+
+
+    @staticmethod
+    def upload_media_file(chat_id):
+
+        public_url = CloudService.select_file_dialog(chat_id)
+
+        if (public_url):
+            return (f"chat_id: {chat_id}, file sent successfully!, can find it on URL: { public_url }"), 200
+        
+        return Chatview.render_error('No file selected.')
+
+    @staticmethod
+    def get_uploaded_media():
+
+        public_url = CloudService.get_uploaded_file_url()
+
+        if public_url:
+            return Chatview.render_success(f'required file url: {public_url}'), 200
+        return Chatview.render_error('required url not found.'), 404
+
+    @staticmethod
+    def get_media(chat_id):
+        content_type = ".jpg"
+        if content_type == ".mp4" or ".mkv" or ".avi":
             return ChatService.get_videos(chat_id,content_type)
-        if content_type == mp3:
+        if content_type == ".mp3":
             return ChatService.get_audios(chat_id,content_type)
-        if content_type == jpg or png:
+        if content_type == ".jpg" or ".png" or ".svg" or ".webp":
             return ChatService.get_images(chat_id,content_type)
 
         return Chatview.render_error('chat not found or content_type is incorrect.'), 404
-        
-    @staticmethod
-    def upload_media_file():
-        return
-
-    @staticmethod
-    def delete_chat(chat_id):
-        if chat_id:
-            db.session.delete(open_chat(chat_id))
-            db.session.commit()

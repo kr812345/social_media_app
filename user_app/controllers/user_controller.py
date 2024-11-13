@@ -38,3 +38,13 @@ class UserController:
         if user:
             return UserView.render_success('Login successful', user.user_id), 200
         return UserView.render_error('Invalid username or password'), 401
+
+    @staticmethod
+    def check_login():
+        data = request.get_json()
+        username = data.get('username')
+        
+        user = UserService.get_user_by_username(username)
+        if user:
+            return UserView.render_success('User is logged in', user.user_id), 200
+        return UserView.render_error('User is not logged in'), 401

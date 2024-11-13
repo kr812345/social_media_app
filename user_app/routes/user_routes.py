@@ -6,11 +6,11 @@ user_bp = Blueprint('user_bp', __name__)
 
 @user_bp.route('/', methods=['GET'])
 def users_home():
-            return f"User App<a style='color: #53ed98; text-decoration: none; margin: 20px; padding: 15px; border-radius:10px; border: #53ed98 2px solid;' href={'/api/users'}> get_all_users 😎</a> <a style='color: #53ed98; text-decoration: none; margin: 10px; padding: 15px; border-radius:10px; border: #53ed98 2px solid;' href={"/api/users/<username"}> get_user 🫠</a> <a style='color: #53ed98; text-decoration: none; margin: 10px; padding: 15px; border-radius:10px; border: #53ed98 2px solid;' href='/redirect'> Open Chat App 🫠</a>"
+            return f"User App<a style='color: #53ed98; text-decoration: none; margin: 20px; padding: 15px; border-radius:10px; border: #53ed98 2px solid;' href={'/api/users'}> get_all_users 😎</a> <a style='color: #53ed98; text-decoration: none; margin: 10px; padding: 15px; border-radius:10px; border: #53ed98 2px solid;' href={"/api/users/<username"}> get_user 🫠</a> <a style='color: #53ed98; text-decoration: none; margin: 10px; padding: 15px; border-radius:10px; border: #53ed98 2px solid;' href={'/redirect'}> Open Chat App 🫠</a>"
 
-@chat_bp.route('/redirect')
+@user_bp.route('/redirect', methods=['GET'])
 def redirect():
-    return redirect(url_for(get_all_chats))
+    return redirect('http://localhost:{}'.format(5003))
 
 @user_bp.route('/api/users', methods=['GET'])
 def get_all_users():
